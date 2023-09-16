@@ -1,0 +1,17 @@
+dependencies:
+  - aave/aave-v3-core@1.19.1
+
+compiler:
+  solc:
+    remappings:
+      - "@aave=aave/aave-v3-core@1.19.1"
+
+
+dotenv: .env
+
+networks:
+  default: mainnet-fork-dev
+  mainnet-fork-dev:
+    PoolAddressesProvider: "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e"
+    WethToken: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+  sepolia:
