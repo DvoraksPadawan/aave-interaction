@@ -4,17 +4,21 @@ from web3 import Web3
 
 
 def main():
-    amount = 100*(10**18)
     account = helpful_scripts.get_account()
-    price_of_eth()
-    #weth_contract = get_weth_contract()
+    amount = 100*(10**18)
+    price_of_eth = get_price_of_eth()
     get_weth_tokens(amount)
+    #input()
     deposit_to_aave(amount)
-    _dai_eth_price_feed = config["networks"][network.show_active()]["DaiEth"]
-    _dai = config["networks"][network.show_active()]["Dai"]
-    dai = get_ERC20(_dai)
-    print(amount * 0.1 * get_asset_price(_dai_eth_price_feed))
-    borrow(dai, amount * 0.1 * get_asset_price(_dai_eth_price_feed))
+    #input()
+    dai = get_Dai_contract()
+    print(f"to borrow: {amount * 0.5 * price_of_eth}")
+    #input()
+    borrow(dai, amount * 0.5 * price_of_eth)
+    #input()
+    amount_to_return = dai.balanceOf(account)
+    repay(dai, amount_to_return)
+    #repay(dai)
 
 
 def get_lending_pool():
@@ -92,19 +96,17 @@ def get_asset_price(price_feed_address):
     print(f"price: {price}")
     return price
 
-def price_of_eth():
+def get_price_of_eth():
     _dai_eth_price_feed = config["networks"][network.show_active()]["DaiEth"]
     price = get_asset_price(_dai_eth_price_feed)
     price_of_eth = (1 / price) * 10 ** 18
-    print(print(f"price of eth: {price_of_eth}"))
+    print(f"price of eth: {price_of_eth}")
     return price_of_eth
 
 def convert_pool_user_data_to_eth_and_print(account = None):
     account = account if account else helpful_scripts.get_account()
     lending_pool = get_lending_pool()
-    _dai_eth_price_feed = config["networks"][network.show_active()]["DaiEth"]
-    price_of_eth = (1/get_asset_price(_dai_eth_price_feed)) *10**18
-    print(f"price of eth: {price_of_eth}")
+    price_of_eth = get_price_of_eth()
     collateral_usd, debt_usd, borrowable_usd = get_pool_user_data(lending_pool, account)
     collateral_eth = collateral_usd / (price_of_eth*10**8)
     debt_eth = debt_usd / (price_of_eth*10**8)
@@ -118,17 +120,27 @@ def get_ERC20(token_address):
     token_contract = interface.IERC20(token_address)
     return token_contract
 
-# def get_Dai_contract():
-#     dai_address = config["networks"][network.show_active()]["Dai"]
-#     dai_contract = get_ERC20(dai_address)
-#     return dai_contract
+def get_Dai_contract():
+    dai_address = config["networks"][network.show_active()]["Dai"]
+    dai_contract = get_ERC20(dai_address)
+    return dai_contract
 
-def borrow(asset, amount, interestMode = 2, refferal = 0, onBehalfOf = None, account = None):
+def borrow(asset, amount, interest_mode = 2, refferal = 0, on_behalf_off = None, account = None):
     account = account if account else helpful_scripts.get_account()
-    onBehalfOf = onBehalfOf if onBehalfOf else account
+    on_behalf_off = on_behalf_off if on_behalf_off else account
     lending_pool = get_lending_pool()
     print_balances(asset)
-    tx = lending_pool.borrow(asset, amount, interestMode, refferal, onBehalfOf, {"from":account})
+    tx = lending_pool.borrow(asset, amount, interest_mode, refferal, on_behalf_off, {"from":account})
+    tx.wait(1)
+    print_balances(asset)
+    convert_pool_user_data_to_eth_and_print()
+
+def repay(asset, amount = (2**256)-1, interest_mode = 2, on_behalf_off = None, account = None):
+    account = account if account else helpful_scripts.get_account()
+    on_behalf_off = on_behalf_off if on_behalf_off else account
+    lending_pool = get_lending_pool()
+    approve(asset, lending_pool, amount)
+    tx = lending_pool.repay(asset, amount, interest_mode, on_behalf_off, {"from":account})
     tx.wait(1)
     print_balances(asset)
     convert_pool_user_data_to_eth_and_print()
